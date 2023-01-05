@@ -1,4 +1,4 @@
-// jshint esverion:6
+// jshint esversion:6
 
 const express = require("express");
 
@@ -6,17 +6,53 @@ const https = require("https");
 
 const bodyParser = require("body-parser");
 
+const mongoose = require("mongoose");
+
+const ejs = require("ejs");
+
+const { string } = require("prop-types");
+
+const session = require('express-session');
+
+const passport = require('passport');
+
+const passportLocalMongoose = require('passport-local-mongoose');
+
+const GoogleStrategy = require('passport-google-oauth20').Strategy;
+
+const findOrCreate = require('mongoose-findorcreate');
+
 const app = express();
 
-// app.use(express.static("static")); 
+app.set("view engine", "ejs");
+
+app.use(express.static("public")); 
 
 app.use(bodyParser.urlencoded ({extended: true}));
 
-app.get("/", function (req, res) {
+// app.get("/", function (req, res) {
 
-    res.sendFile(__dirname + "/index.html");
+//     res.sendFile(__dirname + "/index.html");
 
-});
+// });
+
+mongoose.set('strictQuery', true);
+
+mongoose.connect("mongodb://127.0.0.1:27017/weatherDB");
+
+const itemSchema = {
+  fname: String,
+  lname: String,
+  contact: Number,
+  email: String ,
+  feedback: String
+};
+
+//creating model
+const Info = mongoose.model("Infomation",itemSchema);
+
+
+//post request from the contact page to store the data
 
 app.post("/", function ( req, res) {
 
@@ -32,12 +68,12 @@ app.post("/", function ( req, res) {
 
     https.get( url, function (response) {
 
-        console.log(response.statusCode);
+        // console.log(response.statusCode);
 
         response.on("data", function (data) {
 
             const weatherData = (JSON.parse(data));
-            
+           // console.log(weatherData);
         //     const object = {
 
         //         name: "Aditya",
@@ -46,12 +82,17 @@ app.post("/", function ( req, res) {
         //     }
         //     console.log(JSON.stringify(object));
         // });
-
+          
         const temp = weatherData.main.temp;
 
         // console.log(temp);
 
         const des = weatherData.weather[0].description;
+
+        // const coord = weatherData.coord;
+        // console.log(coord);
+
+        const visibility = weatherData.visibility;
 
         const icon = weatherData.weather[0].icon;
 
@@ -61,12 +102,17 @@ app.post("/", function ( req, res) {
 
         const wind = weatherData.wind.speed;
 
-        
+        const lon = weatherData.coord.lon;
+
+        const lat = weatherData.coord.lat;
+
 
         // body.style.backgroundImage = url ('bg.jpg');
 
-        const imageURL =  "http://openweathermap.org/img/wn/" + icon + "@2x.png"
+        const imageURL =  "http://openweathermap.org/img/wn/" + icon + "@2x.png";
 
+        res.render("response",{query:query, temp:temp, des:des, imageURL: imageURL, pres: pres, humd: humd, wind: wind, lat: lat, lon: lon, visibility: visibility});
+/*
         res.write("<h1>The temperature in " + query + " is " + temp + " degrees Celcius. </h1>");
 
         res.write("<h1>Description of weather prevailing there: " + des + "</h1>");
@@ -79,7 +125,7 @@ app.post("/", function ( req, res) {
 
         res.write("<h1>Wind Speed " + wind + " m/s</h1>");
 
-        res.send();
+        res.send();*/
 
     });
 
@@ -87,6 +133,47 @@ app.post("/", function ( req, res) {
 
     // console.log("Post request recieved");
 });
+
+app.get("/contact", function (req, res) {
+
+    res.render("contact");
+  });
+
+
+  app.post("/contact", function(req, res){
+      const post = new Info({
+      fname:req.body.firstname,
+      lname:req.body.lastname,
+      contact:req.body.num,
+      email:req.body.mail,
+      feedback:req.body.feedback
+    }); 
+    post.save();
+    res.render("contact");   
+  });
+  
+
+app.get("/destination", function (req, res) {
+
+    res.render("destination");
+  });
+
+app.get("/home", function (req, res) {
+
+    res.render("home");
+  });
+
+app.get("/", function(req, res) {
+
+  res.render("landing");
+});
+  
+// app.get("/", function (req, res) {
+
+//     const day = date.getDate;
+
+//     res.render("date", {listTitle: day});
+//   });
 
 app.listen(3000, function () {
 
